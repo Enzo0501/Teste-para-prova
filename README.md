@@ -266,6 +266,7 @@ namespace APITeste.Models
         public Usuario Usuario { get; set; }
     }
 }
+
 --
 namespace APITeste.Models
 {
@@ -288,6 +289,7 @@ namespace APITeste.Models
         }
     }
 }
+
 --
 app.MapPost("/apiteste/tarefas/cadastrar", ([FromBody] Tarefa tarefa, [FromServices] AppDataContext ctx) => 
 {
@@ -301,9 +303,199 @@ app.MapPost("/apiteste/tarefas/cadastrar", ([FromBody] Tarefa tarefa, [FromServi
     ctx.SaveChanges();
     return Results.Created($"/apiteste/tarefas/buscar/{tarefa.TarefaId}", tarefa);
 });
+
 ----
 
 ####Muitos pra muitos:
+
+namespace APITeste.Models
+{
+    public class Usuario
+    {
+        public int UsuarioId { get; set; }
+        public string? Nome { get; set; }
+        
+        // Relacionamento muitos-para-muitos
+        public ICollection<Tarefa> Tarefas { get; set; } = new List<Tarefa>();
+    }
+}
+
+namespace APITeste.Models
+{
+    public class Tarefa
+    {
+        public int TarefaId { get; set; }
+        public string? Nome { get; set; }
+        public DateTime CriadoEm { get; set; } = DateTime.Now;
+
+        // Relacionamento muitos-para-muitos
+        public ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
+    }
+}
+
+
+--
+namespace APITeste.Models
+{
+    public class AppDataContext : DbContext
+    {
+        public DbSet<Tarefa> Tarefas { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseSqlite("Data Source=app.db");
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            // O EF Core já reconhece automaticamente o relacionamento muitos-para-muitos
+            modelBuilder.Entity<Usuario>()
+                .HasMany(u => u.Tarefas)
+                .WithMany(t => t.Usuarios);
+        }
+    }
+}
+
+Exemplo de API para cadastrar uma tarefa com múltiplos usuários
+Aqui está um exemplo de como você poderia cadastrar uma tarefa e associar vários usuários a ela:
+
+csharp
+Copiar código
+app.MapPost("/apiteste/tarefas/cadastrar", ([FromBody] Tarefa tarefa, [FromServices] AppDataContext ctx) => 
+{
+    if (tarefa.Usuarios == null || !tarefa.Usuarios.Any())
+    {
+        return Results.BadRequest("É necessário associar pelo menos um usuário à tarefa.");
+    }
+
+    foreach (var usuario in tarefa.Usuarios)
+    {
+        var usuarioExistente = ctx.Usuarios.Find(usuario.UsuarioId);
+        if (usuarioExistente == null)
+        {
+            return Results.BadRequest($"Usuário com ID {usuario.UsuarioId} não encontrado.");
+        }
+    }
+
+    ctx.Tarefas.Add(tarefa);
+    ctx.SaveChanges();
+    return Results.Created($"/apiteste/tarefas/buscar/{tarefa.TarefaId}", tarefa);
+});
+
+Exemplo de API para buscar tarefas com seus usuários
+csharp
+Copiar código
+app.MapGet("/apiteste/tarefas/listar", ([FromServices] AppDataContext ctx) => 
+{
+    var tarefas = ctx.Tarefas.Include(t => t.Usuarios).ToList();
+    if (tarefas.Any())
+    {
+        return Results.Ok(tarefas);
+    }
+    return Results.NotFound("Nenhuma tarefa encontrada.");
+});
+
+Exemplo de API para buscar usuários com suas tarefas
+csharp
+Copiar código
+app.MapGet("/apiteste/usuarios/listar", ([FromServices] AppDataContext ctx) => 
+{
+    var usuarios = ctx.Usuarios.Include(u => u.Tarefas).ToList();
+    if (usuarios.Any())
+    {
+        return Results.Ok(usuarios);
+    }
+    return Results.NotFound("Nenhum usuário encontrado.");
+});
+
+-------
+
+###Um pra um###
+
+namespace APITeste.Models
+{
+    public class Usuario
+    {
+        public int UsuarioId { get; set; }
+        public string? Nome { get; set; }
+        
+        // Relacionamento um-para-um com Tarefa
+        public Tarefa? Tarefa { get; set; }
+    }
+}
+
+namespace APITeste.Models
+{
+    public class Tarefa
+    {
+        public int TarefaId { get; set; }
+        public string? Nome { get; set; }
+        public DateTime CriadoEm { get; set; } = DateTime.Now;
+
+        // Chave estrangeira para garantir relacionamento um-para-um
+        public int UsuarioId { get; set; }
+        public Usuario Usuario { get; set; }
+    }
+}
+
+using Microsoft.EntityFrameworkCore;
+
+namespace APITeste.Models
+{
+    public class AppDataContext : DbContext
+    {
+        public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Tarefa> Tarefas { get; set; }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseSqlite("Data Source=app.db");
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            // Configurar relacionamento um-para-um entre Usuario e Tarefa
+            modelBuilder.Entity<Usuario>()
+                .HasOne(u => u.Tarefa)
+                .WithOne(t => t.Usuario)
+                .HasForeignKey<Tarefa>(t => t.UsuarioId);  // Tarefa terá a chave estrangeira UsuarioId
+        }
+    }
+}
+
+app.MapPost("/apiteste/usuarios/cadastrar", ([FromBody] Usuario usuario, [FromServices] AppDataContext ctx) => 
+{
+    if (string.IsNullOrWhiteSpace(usuario.Nome))
+    {
+        return Results.BadRequest("O nome do usuário é obrigatório.");
+    }
+
+    if (usuario.Tarefa == null)
+    {
+        return Results.BadRequest("É necessário fornecer uma tarefa.");
+    }
+
+    ctx.Usuarios.Add(usuario);
+    ctx.SaveChanges();
+    return Results.Created($"/apiteste/usuarios/buscar/{usuario.UsuarioId}", usuario);
+});
+
+app.MapGet("/apiteste/usuarios/buscar/{id}", ([FromRoute] int id, [FromServices] AppDataContext ctx) => 
+{
+    var usuario = ctx.Usuarios
+        .Include(u => u.Tarefa)  // Inclui a tarefa associada ao usuário
+        .FirstOrDefault(u => u.UsuarioId == id);
+
+    if (usuario == null)
+    {
+        return Results.NotFound("Usuário não encontrado.");
+    }
+
+    return Results.Ok(usuario);
+});
+
+
 
 
 
