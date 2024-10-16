@@ -237,6 +237,75 @@ public class Tarefa
     public DateTime CriadoEm { get; set; } = DateTime.Now;
 }
 
+--------------------------------------------------------
+Relacionamentos
+UM pra muitos
+
+namespace APITeste.Models
+{
+    public class Usuario
+    {
+        public int UsuarioId { get; set; }
+        public string? Nome { get; set; }
+        public ICollection<Tarefa> Tarefas { get; set; } = new List<Tarefa>();
+    }
+}
+
+--
+
+namespace APITeste.Models
+{
+    public class Tarefa
+    {
+        public int TarefaId { get; set; }
+        public string? Nome { get; set; }
+        public DateTime CriadoEm { get; set; } = DateTime.Now;
+        
+        // Propriedade de chave estrangeira
+        public int UsuarioId { get; set; }
+        public Usuario Usuario { get; set; }
+    }
+}
+--
+namespace APITeste.Models
+{
+    public class AppDataContext : DbContext
+    {
+        public DbSet<Tarefa> Tarefas { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseSqlite("Data Source=app.db");
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Tarefa>()
+                .HasOne(t => t.Usuario)
+                .WithMany(u => u.Tarefas)
+                .HasForeignKey(t => t.UsuarioId);
+        }
+    }
+}
+--
+app.MapPost("/apiteste/tarefas/cadastrar", ([FromBody] Tarefa tarefa, [FromServices] AppDataContext ctx) => 
+{
+    var usuario = ctx.Usuarios.Find(tarefa.UsuarioId);
+    if (usuario == null)
+    {
+        return Results.BadRequest("Usuário não encontrado.");
+    }
+
+    ctx.Tarefas.Add(tarefa);
+    ctx.SaveChanges();
+    return Results.Created($"/apiteste/tarefas/buscar/{tarefa.TarefaId}", tarefa);
+});
+----
+
+####Muitos pra muitos:
+
+
 
 
 
