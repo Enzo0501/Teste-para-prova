@@ -106,3 +106,19 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
                 .WithMany(t => t.Tabela2s)       // Uma Tarefa tem muitas Tabela2
                 .HasForeignKey(t => t.TarefaId); // A Foreign Key é TarefaId
         }
+
+--------------------------------------------------
+Criar uma Solution e API
+
+dotnet new sln --output NomeDaSolução ->cd .\NomeSoluçao\
+
+dotnet new web --name NomedaAPI
+dentro da solucao
+dotnet sln add NomedaAPI
+
+dotnet run --project NomeApi
+pegar http://localhost:5258
+criar teste.http
+
+criar pasta models
+
