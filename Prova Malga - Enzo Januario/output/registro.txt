@@ -1,0 +1,12 @@
+Aluno: Enzo
+Matricula: 1234
+Idade: 19
+
+Aluno: Andres
+Matricula: 1235
+Idade: 16
+
+Aluno: Bruno
+Matricula: 1236
+Idade: 21
+
