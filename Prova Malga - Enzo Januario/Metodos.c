@@ -53,7 +53,7 @@ int main(){
     {
         for (i = tam - 1; i > 0; i--)
     {
-        for (j = 0; j < tam; j++)
+        for (j = 0; j < i; j++)
         {
             if (vet[j] > vet[j+1])
             {
