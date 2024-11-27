@@ -144,6 +144,7 @@ npx create-react-app my-app --template typescript
 cd my-app
 npm install axios
 
+
 my-app
 ├── node_modules
 ├── public
@@ -156,6 +157,9 @@ my-app
 ├── package.json
 ├── tsconfig.json
 └── README.md
+
+npm install react-router-dom
+npm install @types/react-router-dom
 
 --------------------
 
