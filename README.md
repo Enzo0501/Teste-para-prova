@@ -138,6 +138,25 @@ dotnet add package Microsoft.EntityFrameworkCore.Design
 
 dotnet ef migrations add InitialCreate
 dotnet ef database update
+
+###Criando Um react####
+npx create-react-app my-app --template typescript
+cd my-app
+npm install axios
+
+my-app
+├── node_modules
+├── public
+│   └── index.html
+├── src
+│   ├── App.tsx
+│   ├── index.css
+│   ├── index.tsx
+│   └── react-app-env.d.ts
+├── package.json
+├── tsconfig.json
+└── README.md
+
 --------------------
 
 using APITeste.Models;
